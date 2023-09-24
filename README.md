@@ -101,3 +101,7 @@ To run the playbooks, you need to run the following command from the root of the
 ```
 ansible-playbook -i staging.yml site.yml --ask-vault-pass
 ```
+
+## About this Repository
+
+In this repo I've defined a few roles that can be used to configure an IPC. The roles are defined in the `roles` directory. The `common` role is applied to all hosts. The `machine-variant-a` and `machine-variant-b` roles are applied to hosts that are in the `machine-variant-a` and `machine-variant-b` groups respectively. The `machine-variant-a` and `machine-variant-b` groups are defined in the `staging.yml` file.
