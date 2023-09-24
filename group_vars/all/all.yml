@@ -1,0 +1,16 @@
+---
+ansible_connection: winrm
+ansible_user: Administrator
+ansible_password: "{{ vault_ansible_password }}"
+ansible_winrm_transport: basic
+ansible_port: 5985
+ansible_become_method: runas
+ansible_become_user: Administrator
+ansible_become_password: "{{ vault_ansible_password }}"
+
+#http://<your repo>/nuget/internal-feed # replace with your internal NuGet repo URL, see instructions
+internal_nuget_repo: " {{ vault_internal_nuget_repo }}"
+
+tf6100_opc_ua_username: UaUser
+tf6100_opc_ua_password: "{{ vault_tf6100_opc_ua_password }}"
+

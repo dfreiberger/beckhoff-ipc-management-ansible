@@ -1,0 +1,5 @@
+---
+- hosts: testing
+  roles:
+    - common
+    # - testing

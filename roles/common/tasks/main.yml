@@ -1,0 +1,286 @@
+---
+# The following tasks disable User Account Control and add additional privileges to this user
+# They may not be recommended for production use, but are useful for testing
+- name: Add additional privileges
+  win_user_right:
+    name: SeTcbPrivilege 
+    users: "{{ ansible_user }}"
+    action: add
+
+- name: Turn UAC off
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\system
+    name: EnableLUA
+    data: 0
+    type: dword
+    state: present
+  register: uac_result
+
+- name: Reboot after disabling UAC
+  win_reboot:
+  when: uac_result is changed
+
+- name: Wait for target connection to become reachable/usable
+  wait_for_connection:
+    timeout: 240
+
+# Initial Network configuration
+# Rename the network adapters to a meaningful name
+# This can then be used with the TwinCAT project with "Virtual Device Names" so that it is not
+# necessary to change the project when moving to a new computer
+# see also https://infosys.beckhoff.com/english.php?content=../content/1033/tc3_io_intro/1258020619.html&id=
+- name: Rename the network adapters
+  ansible.windows.win_powershell:
+    script: |
+      [CmdletBinding()]
+      param (
+        [string]$adapter_name,
+        [string]$new_adapter_name
+      )
+      Rename-NetAdapter -Name $adapter_name -NewName $new_adapter_name
+    parameters:
+      adapter_name: "{{ item.original_name }}"
+      new_adapter_name: "{{ item.new_name }}"
+  ignore_errors: true
+  loop: "{{ network_adapters }}"
+
+- name: Configure IP address on adapters
+  win_command:
+    cmd: netsh interface ipv4 set address name="{{ item.new_name }}" static {{ item.ipv4_address }} {{ item.ipv4_netmask }} {{ item.ipv4_gateway }}
+  when: item.ipv4_address is defined
+  loop: "{{ network_adapters }}"
+
+- wait_for_connection:
+    timeout: 240
+
+- name: Set the DNS addresses
+  win_dns_client:
+    adapter_names: ["{{ item.new_name }}"]
+    ipv4_addresses: "{{ item.dns_servers }}"
+    state: present
+  when: item.dns_servers is defined
+  ignore_errors: true
+  loop: "{{ network_adapters }}"
+
+# Enable jumbo frames on adapters used for GigE vision cameras
+- name: Configure jumbo frames on GigE enabled adapters
+  ansible.windows.win_powershell:
+    script: |
+      [CmdletBinding()]
+      param (
+        [string]$adapter_name
+      )
+      Set-NetAdapterAdvancedProperty -Name $adapter_name -DisplayName "Jumbo Packet" -DisplayValue $enabled
+    parameters:
+      adapter_name: "{{ item.new_name }}"
+  when: item.enable_jumbo_frames is defined and item.enable_jumbo_frames == true
+  loop: "{{ network_adapters }}"
+
+# Time configuration
+- name: Set timezone to Pacific Standard time
+  community.windows.win_timezone:
+    timezone: Pacific Standard Time
+
+# Package Installation
+- name: Install OpenSSH
+  win_chocolatey:
+    name: openssh
+    state: present
+    package_params: /SSHServerFeature
+  register: openssh_result
+
+- name: Open port {{ opt_openssh_port }} for inbound SSH connections
+  win_firewall_rule:
+    name: Win32-OpenSSH inbound
+    protocol: tcp
+    localport: 22
+    direction: in
+    action: allow
+    state: present
+    enabled: yes
+    profiles: domain,private
+
+- name: Start openssh service
+  win_service:
+    name: sshd
+    state: started
+    start_mode: delayed
+  when: openssh_result is changed
+
+- name: Set the default SSH shell
+  win_regedit:
+    path: HKLM:\SOFTWARE\OpenSSH
+    name: DefaultShell
+    data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+    type: string
+    state: present
+
+- name: Change the hostname to {{ target_hostname }}
+  ansible.windows.win_hostname:
+    name: "{{ target_hostname }}"
+  register: res
+
+- name: Reboot
+  ansible.windows.win_reboot:
+  when: res.reboot_required
+
+- name: Wait for target connection to become reachable/usable
+  ansible.builtin.wait_for_connection:
+    timeout: 240
+
+- name: Install TwinCAT
+  win_chocolatey:
+    name: TwinCAT-XAR
+    state: present
+    version: 3.1.4024.20
+    source: "{{ internal_nuget_repo }}"
+  register: res
+
+- name: Install TF6100-OPC-UA
+  win_chocolatey:
+    name: TF6100-OPC-UA
+    state: present
+    version: 4.4.67
+    force: true
+    source: "{{ internal_nuget_repo }}"
+
+- name: Configure TF6100
+  win_template: 
+    src: roles/common/templates/tf6100-TcUaDaConfig.xml.j2
+    dest: C:\TwinCAT\Functions\TF6100-OPC-UA\Win64\Server\TcUaDaConfig.xml
+
+- name: Open port for inbound OPC-UA connections
+  win_firewall_rule:
+    name: TF6100-OPC-UA inbound
+    protocol: tcp
+    localport: 4840
+    direction: in
+    action: allow
+    state: present
+    enabled: yes
+    profiles: domain,private
+
+# Post TwinCAT Configuration
+# Use this task to configure the network adapters used for TwinCAT, this should be applied
+# to any network adapter used for realtime communication, for example EtherCAT or EAP
+- name: Install Real-Time Ethernet driver on "TwinCAT" adapter
+  win_command:
+      cmd: C:\TwinCAT\3.1\System\TcRteInstall.exe -installnic {{ item.new_name }} /S
+  loop: "{{ network_adapters }}"
+  when: item.install_realtime_driver is defined and item.install_realtime_driver == true
+
+- name: Wait for target connection to become reachable/usable
+  wait_for_connection:
+    timeout: 240
+
+- name: Hide TwinCAT splash screen
+  win_regedit:
+    path: HKLM:\SOFTWARE\WOW6432Node\Beckhoff\TwinCAT3\System
+    name: SysSplashTimeout
+    data: 0xffffffff
+    type: dword
+
+- name: Change AMSNetId
+  win_regedit:
+    path: HKLM:\SOFTWARE\WOW6432Node\Beckhoff\TwinCAT3\System
+    name: AmsNetId
+    data: 
+      - "{{ target_ams_net_id.split('.')[0] | int }}"
+      - "{{ target_ams_net_id.split('.')[1] | int }}"
+      - "{{ target_ams_net_id.split('.')[2] | int }}"
+      - "{{ target_ams_net_id.split('.')[3] | int }}"
+      - "{{ target_ams_net_id.split('.')[4] | int }}"
+      - "{{ target_ams_net_id.split('.')[5] | int }}"
+    type: binary
+  when: target_ams_net_id is defined
+
+# Isolate CPU cores
+- name: Isolate CPU cores
+  ansible.windows.win_powershell:
+    script: |
+      [CmdletBinding()]
+      param (
+          [String]
+          $NumberOfCores
+      )
+      $logicalProcessors = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+      $logicalProcessorsNew = $logicalProcessors - 1
+      Start-Process -Wait -WindowStyle Hidden -FilePath "bcdedit" -ArgumentList "/set numproc $logicalProcessorsNew"
+    parameters:
+      NumberOfCores: "{{ isolated_core_count }}"
+
+- name: Wait for target connection to become reachable/usable
+  ansible.builtin.wait_for_connection:
+    timeout: 240
+
+- name: Reboot
+  ansible.windows.win_reboot:
+
+- name: Wait for target connection to become reachable/usable
+  ansible.builtin.wait_for_connection:
+    timeout: 240
+
+- name: Create temporary certs directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: certs
+  register: temp_certs_dir
+  delegate_to: localhost
+
+- name: Create private key
+  community.crypto.openssl_privatekey:
+    path: "{{ temp_certs_dir.path }}/key.pem"
+    type: RSA
+    size: 2048
+  delegate_to: localhost
+
+- name: Get the control node hostname
+  ansible.builtin.setup:
+    gather_subset: "!all"
+    delegate_facts: true
+    delegate_to: localhost
+  register: control_node
+
+- name: Create certificate signing request (CSR)
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ temp_certs_dir.path }}/key.pem"
+    common_name: AnsibleOpcUaClient
+    organization_name: Example Organization
+    subject_alt_name:
+      - "URI:urn:ansible:opc:ua:client,DNS:{{ control_node.ansible_facts.ansible_hostname }}"
+  register: csr
+  delegate_to: localhost
+
+- name: Create self-signed certificate from CSR
+  community.crypto.x509_certificate:
+    path: "{{ temp_certs_dir.path }}/cert.pem"
+    csr_content: "{{ csr.csr }}"
+    privatekey_path: "{{ temp_certs_dir.path }}/key.pem"
+    provider: selfsigned
+  delegate_to: localhost
+
+- name: Enable Trust on First Use
+  command: python3
+  args:
+    stdin: |
+      from asyncua.sync import Client
+      client = Client("opc.tcp://{{ ansible_host }}:4840")
+      ex = None
+      try:
+        client.application_uri = "urn:ansible:opc:ua:client" 
+        cert_path = "{{ temp_certs_dir.path }}/cert.pem"
+        key_path = "{{ temp_certs_dir.path }}/key.pem"
+        client.set_security_string(f"Basic256Sha256,SignAndEncrypt,{cert_path},{key_path}")
+        client.connect()
+        node = client.get_node("ns=2;i=268435472")
+        method_node = client.get_node("ns=2;i=268435712")
+        result = node.call_method(method_node, "{{ tf6100_opc_ua_username }}", "{{ tf6100_opc_ua_password }}")
+        client.disconnect()
+      except Exception as e:
+        ex = e
+      finally:
+        client.disconnect()
+        if ex:
+          raise ex
+  ignore_errors: true
+  delegate_to: localhost

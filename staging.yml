@@ -1,0 +1,9 @@
+---
+testing:
+  hosts:
+    test_ipc_01:
+      ansible_host: 192.168.1.50 # replace with your IPC IP address
+      target_hostname: TEST-IPC-01 # replace with the hostname you want this IPC to be configured with
+      set_hostname: true # set to true if you want to set hostname
+      target_ams_net_id: 192.168.1.50.1.1
+

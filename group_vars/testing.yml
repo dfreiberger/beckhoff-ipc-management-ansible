@@ -1,0 +1,27 @@
+---
+# this example is for a C6920, you will need to change the values for your system
+# these are the adapter interface descriptions as they appear in Windows or when running the command
+# Get-NetAdapter
+# the idea is to choose a value that is consistent between new computers of the same model
+network_adapters:
+  - original_name: "Ethernet0"
+    new_name: "Ethernet0"
+    dns_servers: [8.8.8.8, 8.8.4.4]
+  - original_name: "Ethernet1"
+    new_name: "X102-Local"
+    install_realtime_driver: true
+    enable_jumbo_frames: true
+    ipv4_address: 192.168.1.2
+    ipv4_netmask: 255.255.255.0
+    ipv4_gateway: ""
+    dns_servers: [8.8.8.8, 8.8.4.4]
+  - original_name: "Ethernet2"
+    new_name: "X103-Remote"
+    install_realtime_driver: true
+    enable_jumbo_frames: false
+  - original_name: "Ethernet3"
+    new_name: "X110-TwinCAT"
+    install_realtime_driver: true
+    enable_jumbo_frames: false
+
+isolated_core_count: 2
