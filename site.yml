@@ -2,7 +2,7 @@
 - hosts: testing
   roles:
     - common
-- hosts: machine-variant-a
+- hosts: machine_variant_a
   roles:
     - common
     - machine-variant-a

@@ -89,7 +89,7 @@
     package_params: /SSHServerFeature
   register: openssh_result
 
-- name: Open port {{ opt_openssh_port }} for inbound SSH connections
+- name: Open port for inbound SSH connections
   win_firewall_rule:
     name: Win32-OpenSSH inbound
     protocol: tcp
@@ -195,19 +195,20 @@
   when: target_ams_net_id is defined
 
 # Isolate CPU cores
+# Note: it may be better to use Automation Interface for this task
+# because there is no control over which cores are isolated
+# via the bcdedit utility
 - name: Isolate CPU cores
   ansible.windows.win_powershell:
     script: |
       [CmdletBinding()]
       param (
           [String]
-          $NumberOfCores
+          $logical_processor_count
       )
-      $logicalProcessors = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
-      $logicalProcessorsNew = $logicalProcessors - 1
-      Start-Process -Wait -WindowStyle Hidden -FilePath "bcdedit" -ArgumentList "/set numproc $logicalProcessorsNew"
+      Start-Process -Wait -WindowStyle Hidden -FilePath "bcdedit" -ArgumentList "/set numproc $logical_processor_count"
     parameters:
-      NumberOfCores: "{{ isolated_core_count }}"
+      logical_processor_count: "{{ logical_processor_count }}"
 
 - name: Wait for target connection to become reachable/usable
   ansible.builtin.wait_for_connection:

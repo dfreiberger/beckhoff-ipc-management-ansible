@@ -7,8 +7,8 @@ testing:
       set_hostname: true # set to true if you want to set hostname
       target_ams_net_id: 192.168.1.50.1.1
 
-machine-variant-a:
+machine_variant_a:
   hosts:
 
-machine-variant-b:
+machine_variant_b:
   hosts:

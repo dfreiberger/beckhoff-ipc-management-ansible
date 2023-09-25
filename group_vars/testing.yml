@@ -24,4 +24,8 @@ network_adapters:
     install_realtime_driver: true
     enable_jumbo_frames: false
 
-isolated_core_count: 2
+# this can be used for core isolation
+# set this to the number of processors available to windows
+# please make sure to set this to a valid number of processors
+# Note: it may be better to use Automation Interface for this task
+logical_processor_count: 5
