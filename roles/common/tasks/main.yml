@@ -163,7 +163,7 @@
 # Post TwinCAT Configuration
 # Use this task to configure the network adapters used for TwinCAT, this should be applied
 # to any network adapter used for realtime communication, for example EtherCAT or EAP
-- name: Install Real-Time Ethernet driver on "TwinCAT" adapter
+- name: Install Real-Time Ethernet driver on adapters
   win_command:
       cmd: C:\TwinCAT\3.1\System\TcRteInstall.exe -installnic {{ item.new_name }} /S
   loop: "{{ network_adapters }}"
@@ -239,20 +239,14 @@
     size: 2048
   delegate_to: localhost
 
-- name: Get the control node hostname
-  ansible.builtin.setup:
-    gather_subset: "!all"
-    delegate_facts: true
-    delegate_to: localhost
-  register: control_node
-
 - name: Create certificate signing request (CSR)
   community.crypto.openssl_csr_pipe:
     privatekey_path: "{{ temp_certs_dir.path }}/key.pem"
     common_name: AnsibleOpcUaClient
     organization_name: Example Organization
     subject_alt_name:
-      - "URI:urn:ansible:opc:ua:client,DNS:{{ control_node.ansible_facts.ansible_hostname }}"
+      - "URI:urn:ansible:opc:ua:client"
+      - "DNS:{{ lookup('pipe','hostname') }}"
   register: csr
   delegate_to: localhost
 
@@ -280,7 +274,6 @@
         node = client.get_node("ns=2;i=268435472")
         method_node = client.get_node("ns=2;i=268435712")
         result = node.call_method(method_node, "{{ tf6100_opc_ua_username }}", "{{ tf6100_opc_ua_password }}")
-        client.disconnect()
       except Exception as e:
         ex = e
       finally:
@@ -288,4 +281,33 @@
         if ex:
           raise ex
   ignore_errors: true
+  delegate_to: localhost
+
+- name: Test OPC-UA connection
+  command: python3
+  args:
+    stdin: |
+      from asyncua.sync import Client
+      client = Client("opc.tcp://{{ ansible_host }}:4840")
+      ex = None
+      try:
+        client.application_uri = "urn:ansible:opc:ua:client" 
+        cert_path = "{{ temp_certs_dir.path }}/cert.pem"
+        key_path = "{{ temp_certs_dir.path }}/key.pem"
+        client.set_security_string(f"Basic256Sha256,SignAndEncrypt,{cert_path},{key_path}")
+        client.set_user("{{ tf6100_opc_ua_username }}")
+        client.set_password("{{ tf6100_opc_ua_password }}")
+        client.connect()
+      except Exception as e:
+        ex = e
+      finally:
+        client.disconnect()
+        if ex:
+          raise ex
+  delegate_to: localhost
+
+- name: Remove temporary certs directory
+  ansible.builtin.file:
+    path: "{{ temp_certs_dir.path }}"
+    state: absent
   delegate_to: localhost
