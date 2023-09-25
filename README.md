@@ -123,12 +123,19 @@ To follow best practices for storing passwords, you need to set up a vault that 
     ```
     Set a password for the vault when prompted, and record this somewhere safe.
 
-2. Add the following to the vault file:
+2. Add the following to the vault file (note that the usernames associated with these passwords are in the `group_vars/all/all.yml` file)):
     ```
-    vault_ansible_password: <password>
-    vault_ansible_become_password: <password>
+    # this is the password for the IPC user (e.g. this would be "1" by default for Beckhoff IPCs)
+    vault_ansible_password: <password> 
+
+    # this is the password for the IPC user with administrative permissions (e.g. this would be "1" by default for Beckhoff IPCs). This is used when a task requires elevated privileges as denoted by adding a "become: true" to a task
+    vault_ansible_become_password: <password> 
+
+    # this is the password to configure the OPC-UA server to use
+    vault_tf6100_opc_ua_password: <password> 
+
+    # it isn't necessary to store this in the vault, I did this so that it is easy to update this repository with a local copy for testing
     vault_internal_nuget_repo: <repo>
-    tf6100_opc_ua_password: <password>
     ```
 3. Encrypt the vault file by closing the editor
 

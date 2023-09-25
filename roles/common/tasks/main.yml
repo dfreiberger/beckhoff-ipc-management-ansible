@@ -220,6 +220,11 @@
   ansible.builtin.wait_for_connection:
     timeout: 240
 
+# The following section is for configuring the TF6100 OPC-UA server. 
+# It creates a temporary certificate to use for connecting to the server, then connects
+# and calls the TrustOnFirstUse() method to set a username and password for the server,
+# as defined in the group_vars/all/all.yml file
+# Please note the "delegate_to" parameter, this causes Ansible to run the task on the control node
 - name: Create temporary certs directory
   ansible.builtin.tempfile:
     state: directory
