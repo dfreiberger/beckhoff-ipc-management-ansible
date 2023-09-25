@@ -118,17 +118,18 @@ cpush .\packages\TF6100-OPC-UA.4.4.67.0.nupkg -source <your feed> -apiKey <your 
 To follow best practices for storing passwords, you need to set up a vault that contains a few items. 
 
 1. Create a file called `vault` in the `group_vars/all` directory.
-```
-ansible-vault create group_vars/all/vault
-```
-Set a password for the vault when prompted, and record this somewhere safe.
+    ```
+    ansible-vault create group_vars/all/vault
+    ```
+    Set a password for the vault when prompted, and record this somewhere safe.
+
 2. Add the following to the vault file:
-```
-vault_ansible_password: <password>
-vault_ansible_become_password: <password>
-vault_internal_nuget_repo: <repo>
-tf6100_opc_ua_password: <password>
-```
+    ```
+    vault_ansible_password: <password>
+    vault_ansible_become_password: <password>
+    vault_internal_nuget_repo: <repo>
+    tf6100_opc_ua_password: <password>
+    ```
 3. Encrypt the vault file by closing the editor
 
 If you need to edit the file later, use `ansible-vault edit group_vars/all/vault` and enter the password when prompted.
