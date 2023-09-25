@@ -2,37 +2,31 @@
 
 So that others don't have to spend time trying to figure out how to automate the process of configuring Beckhoff IPCs (or other industrial PCs), I have created this repository which is an example of how to use the open source Ansible tool to automate the process of deploying a complete IPC configuration from one to many IPCs.
 
+## TL;DR
+
+Review [roles/common/tasks/main.yml](roles/common/tasks/main.yml) to get a sense for what is possible with this example. You can use this as a starting point for your own configuration.
+
+To run the example you will need to clone this repository onto a Linux PC or into [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install). Then install ansible and some dependencies noted below. On the target IPC you will need to run a few commands from Powershell to enable remote management. Then you can run the following command from the root of the repository:
+
+```
+ansible-playbook -i staging.yml site.yml --ask-vault-pass
+```
+
+And if all goes well you will have a configured IPC. Please read the rest of this document for more information.
+
 ## What is Ansible?
 
 Ansible is an open source tool that allows you to automate the configuration of one or more computers. It uses the concept of playbooks to define the configuration of a computer. A playbook is a YAML file that defines a series of tasks to execute on target systems. See the [Ansible documentation](https://docs.ansible.com/ansible/latest/user_guide/playbooks.html) for more information on playbooks.
 
 ## Why use Ansible?
 
-While you could use Powershell scripts to manually setup IPCs, it is more efficient to leverage a tool that has great support for automating the configuration of computers.
+While you could use Powershell scripts to manually set up IPCs, it is more efficient to leverage a tool that has great support for automating the configuration of computers.
 
 ## Disclaimer
 
 This repository is provided as an example of how to use Ansible to automate the configuration of IPCs. It is not intended to be a complete solution for configuring IPCs. It is intended to be a starting point for you to create your own solution. You will need to modify the example playbooks to meet your specific needs. Bear in mind that recommended security practices may have not been implemented in this example. You should review the example playbooks to ensure that they meet your security requirements.
 
 See also the [license](MIT-LICENSE.txt).
-
-## Getting Started
-
-This project is set up per the recommendations from Ansible. The common role defines all common tasks to apply across all hosts. A couple of example secondary roles have been created, these could be different variants of machines on a factory floor.
-
-To create new roles use the following command:
-```
-ansible-galaxy init <role name>
-```
-
-To assign roles to a particular group of hosts, edit the site.yml file and add the role to the list of roles for the group. e.g. if you added a new role `machine-variant-b` and you wanted to apply it to the host group with the same name of `machine-variant-b` you would add the role to the list of roles for that group:
-
-```
-- hosts: machine-variant-b
-  roles:
-    - common
-    - machine-variant-b
-```
 
 ## Minimal Infrastructure Requirements
 
@@ -74,7 +68,7 @@ You may need to run the following to get the interface index and set it to priva
 Get-NetConnectionProfile
 Set-NetConnectionProfile -InterfaceIndex 5 -NetworkCategory Private
 ```
-## Chocolatey Feed Requirements
+### Chocolatey Feed Requirements
 
 This playbook requires access to a private Nuget or Chocolatey feed that can supply the following packages:
 
@@ -84,7 +78,7 @@ This playbook requires access to a private Nuget or Chocolatey feed that can sup
 | TF6100-OPC-UA | 4.4.67 | common |
 | TF6250-Modbus-TCP | 3.1.4024.0 | machine-variant-a |
 
-You can create a feed in a few ways. One is to create a network share where you place nuget packages. Another, more performant method is to setup a feed using a tool such as [ProGet](https://inedo.com/proget). 
+You can create a feed in a few ways. One is to create a network share where you place nuget packages. Another, more performant method is to set up a feed using a tool such as [ProGet](https://inedo.com/proget). 
 
 You will need to create Nuget packages from the TwinCAT XAR and TF6100 executables in order to place them into the feed. For this there is an example script in the `utils/package_creation` directory.
 
@@ -113,7 +107,7 @@ Publish the package to your feed using the following command:
 cpush .\packages\TF6100-OPC-UA.4.4.67.0.nupkg -source <your feed> -apiKey <your api key> --force
 ```
 
-## Configuring a Vault
+### Configuring a Vault
 
 To follow best practices for storing passwords, you need to set up a vault that contains a few items. 
 
@@ -143,6 +137,8 @@ If you need to edit the file later, use `ansible-vault edit group_vars/all/vault
 
 Note that the above variables are referenced in the `group_vars/all/main.yml` file.
 
+If you want to skip all of this, just add the passwords to the `group_vars/all/all.yml`. This is not recommended but can get you started more quickly.
+
 ## Running the Playbooks
 
 To run the playbooks, you need to run the following command from the root of the repository:
@@ -152,8 +148,25 @@ ansible-playbook -i staging.yml site.yml --ask-vault-pass
 
 ## About this Repository
 
-In this repo I've defined a few roles that can be used to configure an IPC. The roles are defined in the `roles` directory. The `common` role is applied to all hosts. The `machine-variant-a` and `machine-variant-b` roles are applied to hosts that are in the `machine-variant-a` and `machine-variant-b` groups respectively. The `machine-variant-a` and `machine-variant-b` groups are defined in the `staging.yml` file.
+In this repository I've defined a few roles that can be used to configure an IPC. The roles are defined in the `roles` directory. The `common` role is applied to all hosts. The `machine-variant-a` and `machine-variant-b` roles are applied to hosts that are in the `machine-variant-a` and `machine-variant-b` groups respectively. The `machine-variant-a` and `machine-variant-b` groups are defined in the `staging.yml` file.
 
+### Adding New Roles
+
+This project is set up per the recommendations from Ansible. The common role defines all common tasks to apply across all hosts. A couple of example secondary roles have been created, these could be different variants of machines on a factory floor.
+
+To create new roles use the following command:
+```
+ansible-galaxy init <role name>
+```
+
+To assign roles to a particular group of hosts, edit the site.yml file and add the role to the list of roles for the group. e.g. if you added a new role `machine-variant-b` and you wanted to apply it to the host group with the same name of `machine-variant-b` you would add the role to the list of roles for that group:
+
+```
+- hosts: machine-variant-b
+  roles:
+    - common
+    - machine-variant-b
+```
 ### PLC Code Deployment
 
 This project does not deploy the actual PLC code, although this would be easy to add. A couple of methods of doing this include:
@@ -163,10 +176,11 @@ This project does not deploy the actual PLC code, although this would be easy to
 
 The reason I did not add this is that typically (in a fully automated environment) you would deploy PLC code from a build server utilizing a CI/CD pipeline. This is currently outside the scope of this example.
 
-## Contributing
+### Contributing
 
 If you would like to contribute to this project, please fork the repository and submit a pull request. I will review the pull request and merge it if it meets the requirements of the project. Examples of good contributions:
 
 * Adding a new role that configures a specific IPC
 * Adding a new role that configures a specific software package related to Beckhoff or IPCs, for example adding new TF function installers
 * Adding a new role that configures a specific Windows setting
+

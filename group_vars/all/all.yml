@@ -1,16 +1,19 @@
 ---
+# Note, for the passwords below, either create a vault file as recommended (see README.md) or just put the passwords in here
 ansible_connection: winrm
 ansible_user: Administrator
 ansible_password: "{{ vault_ansible_password }}"
+# ansible_password: "1"
 ansible_winrm_transport: basic
 ansible_port: 5985
 ansible_become_method: runas
 ansible_become_user: Administrator
 ansible_become_password: "{{ vault_ansible_password }}"
+# ansible_become_password: "1"
 
-#http://<your repo>/nuget/internal-feed # replace with your internal NuGet repo URL, see instructions
-internal_nuget_repo: " {{ vault_internal_nuget_repo }}"
+internal_nuget_repo: " {{ vault_internal_nuget_repo }}" # alternatively you can just put the nuget repo in here
+# internal_nuget_repo: "http://<your repo>/nuget/internal-feed"
 
 tf6100_opc_ua_username: UaUser
-tf6100_opc_ua_password: "{{ vault_tf6100_opc_ua_password }}"
-
+tf6100_opc_ua_password: "{{ vault_tf6100_opc_ua_password }}" # alternatively you can just put the password in here
+# tf6100_opc_ua_password: "Test1234"
