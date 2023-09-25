@@ -87,6 +87,8 @@ You can create a feed in a few ways. One is to create a network share where you 
 
 You will need to create Nuget packages from the TwinCAT XAR and TF6100 executables in order to place them into the feed. For this there is an example script in the `utils/package_creation` directory.
 
+**Note:** run these commands from a Windows environment, not WSL.
+
 ```
 cd package_creation
 
