@@ -28,4 +28,4 @@ network_adapters:
 # set this to the number of processors available to windows
 # please make sure to set this to a valid number of processors
 # Note: it may be better to use Automation Interface for this task
-logical_processor_count: 5
+# logical_processor_count: 5

@@ -209,6 +209,7 @@
       Start-Process -Wait -WindowStyle Hidden -FilePath "bcdedit" -ArgumentList "/set numproc $logical_processor_count"
     parameters:
       logical_processor_count: "{{ logical_processor_count }}"
+  when: logical_processor_count is defined
 
 - name: Wait for target connection to become reachable/usable
   ansible.builtin.wait_for_connection:
