@@ -44,17 +44,17 @@ The control node must either be Windows running Windows Subsystem for Linux (WSL
 
 1. Install Python 3
 2. Clone this repository into a folder on the control node
-```
-    git clone <repository url>
-    cd <repository folder
-```
+    ```
+    git clone https://github.com/dfreiberger/beckhoff-ipc-management-ansible.git
+    cd beckhoff-ipc-management-ansible
+    ```
 3. Create a virtual environment for Ansible (this is optional but recommended)
-```
+    ```
     # run only once when setting up the virtual environment
     python3 -m venv venv
     # run each time you want to use the virtual environment
     source venv/bin/activate
-```
+    ```
 4. Install Ansible and pywinrm using pip, for example: `pip install ansible pywinrm`
 5. If you want to use the OPC-UA setup tasks, you will also need to install the asyncua library: `pip install asyncua`
 
