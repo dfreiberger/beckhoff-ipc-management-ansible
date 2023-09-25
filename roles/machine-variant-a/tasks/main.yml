@@ -1,2 +1,8 @@
 ---
 # tasks file for machine-variant-a
+- name: Install TF6250-Modbus-TCP
+  win_chocolatey:
+    name: TF6250-Modbus-TCP
+    state: present
+    version: 3.1.4024.0
+    source: "{{ internal_chocolatey_repo }}"

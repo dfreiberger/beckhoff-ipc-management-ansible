@@ -18,7 +18,7 @@ See also the [license](MIT-LICENSE.txt).
 
 ## Getting Started
 
-This project is setup per the recommendations from Ansible. The common role defines all common tasks to apply across all hosts. A couple of example secondary roles have been created, these could be different variants of machines on a factory floor.
+This project is set up per the recommendations from Ansible. The common role defines all common tasks to apply across all hosts. A couple of example secondary roles have been created, these could be different variants of machines on a factory floor.
 
 To create new roles use the following command:
 ```
@@ -78,10 +78,11 @@ Set-NetConnectionProfile -InterfaceIndex 5 -NetworkCategory Private
 
 This playbook requires access to a private Nuget or Chocolatey feed that can supply the following packages:
 
-| Package | Version |
-|-|-|
-| TwinCAT-XAR | 3.1.4024.20 |
-| TF6100-OPC-UA | 4.4.67 |
+| Package | Version | Used in Role |
+|-|-|-|
+| TwinCAT-XAR | 3.1.4024.20 | common |
+| TF6100-OPC-UA | 4.4.67 | common |
+| TF6250-Modbus-TCP | 3.1.4024.0 | machine-variant-a |
 
 You can create a feed in a few ways. One is to create a network share where you place nuget packages. Another, more performant method is to setup a feed using a tool such as [ProGet](https://inedo.com/proget). 
 
@@ -144,3 +145,20 @@ ansible-playbook -i staging.yml site.yml --ask-vault-pass
 ## About this Repository
 
 In this repo I've defined a few roles that can be used to configure an IPC. The roles are defined in the `roles` directory. The `common` role is applied to all hosts. The `machine-variant-a` and `machine-variant-b` roles are applied to hosts that are in the `machine-variant-a` and `machine-variant-b` groups respectively. The `machine-variant-a` and `machine-variant-b` groups are defined in the `staging.yml` file.
+
+### PLC Code Deployment
+
+This project does not deploy the actual PLC code, although this would be easy to add. A couple of methods of doing this include:
+
+1. Copy the pre-built build files over with the `win_copy` module to `C:\TwinCAT\3.1\Boot`
+2. Use the [TwinCAT 3 Automation Interface](https://infosys.beckhoff.com/english.php?content=../content/1033/tc3_automationinterface/242682763.html&id=5107059583047685772) to build and push the projects from a build server
+
+The reason I did not add this is that typically (in a fully automated environment) you would deploy PLC code from a build server utilizing a CI/CD pipeline. This is currently outside the scope of this example.
+
+## Contributing
+
+If you would like to contribute to this project, please fork the repository and submit a pull request. I will review the pull request and merge it if it meets the requirements of the project. Examples of good contributions:
+
+* Adding a new role that configures a specific IPC
+* Adding a new role that configures a specific software package related to Beckhoff or IPCs, for example adding new TF function installers
+* Adding a new role that configures a specific Windows setting
