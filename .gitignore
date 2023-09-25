@@ -162,3 +162,5 @@ cython_debug/
 .vault_pass
 vault
 hidden-staging.yml
+
+packages/

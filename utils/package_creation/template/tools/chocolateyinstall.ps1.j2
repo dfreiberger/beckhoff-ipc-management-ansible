@@ -1,0 +1,21 @@
+$ErrorActionPreference = 'Stop'; 
+
+$toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+$fileLocation = Join-Path $toolsDir '{{ file_name }}'
+
+$packageArgs = @{
+    packageName     = $env:ChocolateyPackageName
+    unzipLocation   = $toolsDir
+    fileType        = '{{ file_type }}'
+    file            = $fileLocation
+
+    softwareName    = '{{ software_name }}*'
+
+    checksum        = '{{ checksum }}'
+    checksumType    = 'sha256'
+
+    silentArgs      = '{{ silent_args }}'
+    validExitCodes  = {{ valid_exit_codes }}
+}
+
+Install-ChocolateyInstallPackage @packageArgs

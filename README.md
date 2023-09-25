@@ -14,6 +14,8 @@ While you could use Powershell scripts to manually setup IPCs, it is more effici
 
 This repository is provided as an example of how to use Ansible to automate the configuration of IPCs. It is not intended to be a complete solution for configuring IPCs. It is intended to be a starting point for you to create your own solution. You will need to modify the example playbooks to meet your specific needs. Bear in mind that recommended security practices may have not been implemented in this example. You should review the example playbooks to ensure that they meet your security requirements.
 
+See also the [license](MIT-LICENSE.txt).
+
 ## Getting Started
 
 This project is setup per the recommendations from Ansible. The common role defines all common tasks to apply across all hosts. A couple of example secondary roles have been created, these could be different variants of machines on a factory floor.
@@ -71,6 +73,41 @@ You may need to run the following to get the interface index and set it to priva
 ```
 Get-NetConnectionProfile
 Set-NetConnectionProfile -InterfaceIndex 5 -NetworkCategory Private
+```
+## Chocolatey Feed Requirements
+
+This playbook requires access to a private Nuget or Chocolatey feed that can supply the following packages:
+
+| Package | Version |
+|-|-|
+| TwinCAT-XAR | 3.1.4024.20 |
+| TF6100-OPC-UA | 4.4.67 |
+
+You can create a feed in a few ways. One is to create a network share where you place nuget packages. Another, more performant method is to setup a feed using a tool such as [ProGet](https://inedo.com/proget). 
+
+You will need to create Nuget packages from the TwinCAT XAR and TF6100 executables in order to place them into the feed. For this there is an example script in the `utils/package_creation` directory.
+
+```
+cd package_creation
+
+# create a nuget package for TwinCAT
+.\createPackageFromInstaller.ps1 "TwinCAT-XAR" "TC31-XAR-Setup.3.1.4024.20.exe" 3.1.4024.20 "Internal" "Internal Use Only" '/s /v"/qr ALLUSERS=1 REBOOT=ReallySuppress"'
+
+# create a nuget package for TF6100-OPC-UA
+.\createPackageFromInstaller.ps1 "TF6100-OPC-UA" "TF6100-OPC-UA.4.4.67.0.exe" 4.4.67.0 "Internal" "Internal Use Only" '/S /v/qn'
+```
+
+To test a package install locally run
+
+```powershell
+$PackageName = "TF6100-OPC-UA"
+choco uninstall $PackageName -f
+choco install $PackageName -fd -y -s ".\packages"
+```
+
+Publish the package to your feed using the following command:
+```
+cpush .\packages\TF6100-OPC-UA.4.4.67.0.nupkg -source <your feed> -apiKey <your api key> --force
 ```
 
 ## Configuring a Vault
